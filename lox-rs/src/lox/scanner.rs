@@ -1,5 +1,8 @@
+use super::errors::LanguageError;
+use std::fmt;
+
 #[derive(Debug)]
-enum TokenType {
+pub enum TokenType {
     // Single-char tokens
     LEFTPAREN,
     RIGHTPAREN,
@@ -47,14 +50,16 @@ enum TokenType {
 
 #[derive(Debug)]
 pub struct Token {
-    token_type: TokenType,
-    lexeme: String,
-    line: i32
+    pub token_type: TokenType,
+    pub lexeme: String,
+    pub line: i32
 }
 
-#[derive(Debug)]
-pub enum LanguageError {
-    SyntaxError(String)
+impl fmt::Display for Token {
+
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.lexeme)
+    }
 }
 
 pub struct Scanner {

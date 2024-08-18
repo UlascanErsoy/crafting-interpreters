@@ -1,4 +1,6 @@
-mod lox;
+extern crate lox_rs;
+
+use lox_rs::lox;
 
 use std::{env, fs, io};
 use std::io::Write;
