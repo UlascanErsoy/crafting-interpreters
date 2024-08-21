@@ -1,10 +1,13 @@
 extern crate lox_rs;
 
 use lox_rs::lox;
+use lox_rs::lox::ast::Visitor;
 
 use std::{env, fs, io};
 use std::io::Write;
 use lox::scanner::Scanner;
+use lox::parser::Parser;
+use lox::ast::{Expr, AstPrinter};
 
 
 
@@ -17,6 +20,15 @@ fn run(source: &String) -> Result<(), &'static str> {
              for token in tokens.iter() {
                 println!("{:?}", token);
             }
+            
+            let mut parser: Parser = Parser::new(tokens);
+            let expr: Expr = if let Ok(expr) = parser.parse() {
+                expr
+            }else{
+                return Err("Some errors occurred i guess idk");
+            };
+
+            println!("{}", AstPrinter{}.visit_expr(&expr));
             Ok(())
         },
         Err(errs) => {

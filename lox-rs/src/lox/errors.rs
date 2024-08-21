@@ -1,4 +1,5 @@
 #[derive(Debug)]
 pub enum LanguageError {
-    SyntaxError(String)
+    SyntaxError(String),
+    ParserError(String)
 }

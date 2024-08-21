@@ -1,7 +1,7 @@
 use super::errors::LanguageError;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum TokenType {
     // Single-char tokens
     LEFTPAREN,
@@ -48,7 +48,7 @@ pub enum TokenType {
     EOF
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
