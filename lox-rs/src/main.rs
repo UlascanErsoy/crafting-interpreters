@@ -7,7 +7,7 @@ use std::{env, fs, io};
 use std::io::Write;
 use lox::scanner::Scanner;
 use lox::parser::Parser;
-use lox::ast::{Expr, AstPrinter};
+use lox::ast::{Expr, AstPrinter, evaluate};
 
 
 
@@ -29,6 +29,7 @@ fn run(source: &String) -> Result<(), &'static str> {
             };
 
             println!("{}", AstPrinter{}.visit_expr(&expr));
+            println!("{:?}", evaluate(expr));
             Ok(())
         },
         Err(errs) => {

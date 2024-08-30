@@ -1,5 +1,6 @@
 use std::mem::discriminant;
 use super::scanner::{TokenType, Token};
+use super::atom::Atom;
 use super::ast::Expr;
 use super::errors::LanguageError;
 
@@ -115,11 +116,11 @@ impl<'a> Parser<'a> {
         self.advance();
 
         match token.token_type {
-            TokenType::FALSE => Expr::BoolLiteral(false),
-            TokenType::TRUE => Expr::BoolLiteral(true),
-            TokenType::NIL => Expr::NIL,
-            TokenType::NUMBER(num) => Expr::NumberLiteral(num),
-            TokenType::STRING(str) => Expr::StringLiteral(str),
+            TokenType::FALSE => Expr::Literal(Atom::Bool(false)),
+            TokenType::TRUE => Expr::Literal(Atom::Bool(true)),
+            TokenType::NIL => Expr::Literal(Atom::Nil),
+            TokenType::NUMBER(num) => Expr::Literal(Atom::Number(num)),
+            TokenType::STRING(str) => Expr::Literal(Atom::String(str)),
             TokenType::LEFTPAREN => {
                 let expr = self.expr();
                 match self.consume(&TokenType::RIGHTPAREN) {
