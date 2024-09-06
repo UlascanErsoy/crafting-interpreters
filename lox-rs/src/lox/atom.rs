@@ -11,6 +11,18 @@ pub enum Atom {
     Nil
 }
 
+impl PartialEq for Atom {
+    
+    fn eq(&self, rhs: &Self) -> bool {
+        match (self, rhs) {
+            (Atom::String(lhs), Atom::String(rhs)) => lhs == rhs,
+            (Atom::Number(lhs), Atom::Number(rhs)) => lhs == rhs,
+            (Atom::Nil, Atom::Nil) => true,
+            _ => false
+        }
+    }
+}
+
 impl From<Token> for Atom {
     fn from(token: Token) -> Self {
         match token.token_type {
@@ -58,7 +70,7 @@ impl Atom {
             (Atom::Number(l) , Atom::Number(r)) => Ok(Atom::Number(l - r)),
             (Atom::Number(l) , Atom::Bool(r)) => Ok(Atom::Number(l - if r {1_f64} else {0_f64})),
             (Atom::Bool(l) , Atom::Number(r)) => Ok(Atom::Number(if l {1_f64} else {0_f64} - r)),
-            (l,r) => Err(LanguageError::TypeError(format!("Addition not supported for {} and {}",l,r))) 
+            (l,r) => Err(LanguageError::TypeError(format!("Subtraction not supported for {} and {}",l,r))) 
         }
 
     }
@@ -68,9 +80,34 @@ impl Atom {
             (Atom::Number(l) , Atom::Number(r)) => Ok(Atom::Number(l * r)),
             (Atom::Number(l) , Atom::Bool(r)) => Ok(Atom::Number(l * if r {1_f64} else {0_f64})),
             (Atom::Bool(l) , Atom::Number(r)) => Ok(Atom::Number(if l {1_f64} else {0_f64} * r)),
-            (l,r) => Err(LanguageError::TypeError(format!("Addition not supported for {} and {}",l,r))) 
+            (l,r) => Err(LanguageError::TypeError(format!("Multiplication not supported for {} and {}",l,r))) 
         }
 
     }
+
+    pub fn divide(lhs: Self, rhs: Self) -> Result<Self, LanguageError> {
+        match (lhs, rhs) {
+            (Atom::Number(l) , Atom::Number(r)) => Ok(Atom::Number(l / r)),
+            (Atom::Number(l) , Atom::Bool(r)) => Ok(Atom::Number(l / if r {1_f64} else {0_f64})),
+            (Atom::Bool(l) , Atom::Number(r)) => Ok(Atom::Number(if l {1_f64} else {0_f64} / r)),
+            (l,r) => Err(LanguageError::TypeError(format!("Division not supported for {} and {}",l,r))) 
+        }
+
+    }
+
+    pub fn comp(t: &TokenType, lhs: Self, rhs: Self) -> Result<Self, LanguageError> {
+        if let (Atom::Number(l) , Atom::Number(r)) = (&lhs, &rhs) {
+            match t {
+                TokenType::LESSEQUAL => Ok(Atom::Bool(l <= r)),
+                TokenType::GREATEREQUAL => Ok(Atom::Bool(l >= r)),
+                TokenType::GREATER => Ok(Atom::Bool(l > r)),
+                TokenType::LESS => Ok(Atom::Bool(l < r)),
+                _ => unreachable!()
+            }
+        }else{
+            Err(LanguageError::TypeError(format!("{:?} not supported between {} and {}", t, lhs, rhs)))
+        }
+    }
+
 
 }

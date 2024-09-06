@@ -7,7 +7,7 @@ use std::{env, fs, io};
 use std::io::Write;
 use lox::scanner::Scanner;
 use lox::parser::Parser;
-use lox::ast::{Expr, AstPrinter, evaluate};
+use lox::ast::{Expr, AstPrinter, Interpreter};
 
 
 
@@ -17,10 +17,6 @@ fn run(source: &String) -> Result<(), &'static str> {
     
     match scanner.scan_tokens() {
         Ok(tokens) => {
-             for token in tokens.iter() {
-                println!("{:?}", token);
-            }
-            
             let mut parser: Parser = Parser::new(tokens);
             let expr: Expr = if let Ok(expr) = parser.parse() {
                 expr
@@ -29,7 +25,14 @@ fn run(source: &String) -> Result<(), &'static str> {
             };
 
             println!("{}", AstPrinter{}.visit_expr(&expr));
-            println!("{:?}", evaluate(expr));
+            let mut int = Interpreter::default();
+            let val = int.evaluate(expr);
+
+            if let Some(err) = int.error {
+                println!("{:?}", err);
+            }else {
+                println!("{:?}", val);
+            }
             Ok(())
         },
         Err(errs) => {

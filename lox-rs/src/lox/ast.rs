@@ -1,3 +1,4 @@
+use super::errors::LanguageError;
 use super::scanner::{Token, TokenType};
 use super::atom::Atom;
 use std::any::{Any, TypeId};
@@ -27,20 +28,53 @@ impl Visitor<String> for AstPrinter {
     }
 }
 
-struct Interpreter;
+pub struct Interpreter {
+    pub error: Option<LanguageError>
+}
+
+impl Default for Interpreter {
+    fn default() -> Self { Interpreter { error: None }}
+}
+
+impl Interpreter {
+
+    pub fn evaluate(&mut self, expr: Expr) -> Atom {
+        if let Some(_) = &self.error {
+            return Atom::Nil;
+        }
+
+        self.visit_expr(&expr)
+    }
+
+}
 
 //dynamic heap allocated Any type
 impl Visitor<Atom> for Interpreter {
     fn visit_expr(&mut self, exp: &Expr) -> Atom {
         match exp {
             Expr::Literal(atom) => atom.clone(),
-            Expr::Grouping(expr) => evaluate(*expr.clone()),
+            Expr::Grouping(expr) => self.evaluate(*expr.clone()),
             Expr::Binary(lhs, op, rhs) => {
-                match op.token_type {
-                    TokenType::PLUS => Atom::add(evaluate(*lhs.clone()), evaluate(*rhs.clone())).unwrap(),
-                    TokenType::MINUS => Atom::sub(evaluate(*lhs.clone()), evaluate(*rhs.clone())).unwrap(),
-                    TokenType::STAR => Atom::mult(evaluate(*lhs.clone()), evaluate(*rhs.clone())).unwrap(),
+                let res = match &op.token_type {
+                    TokenType::PLUS => Atom::add(self.evaluate(*lhs.clone()), self.evaluate(*rhs.clone())),
+                    TokenType::MINUS => Atom::sub(self.evaluate(*lhs.clone()), self.evaluate(*rhs.clone())),
+                    TokenType::STAR => Atom::mult(self.evaluate(*lhs.clone()), self.evaluate(*rhs.clone())),
+                    TokenType::SLASH => Atom::divide(self.evaluate(*lhs.clone()), self.evaluate(*rhs.clone())),
+                    TokenType::BANGEQUAL => Ok(Atom::Bool(self.evaluate(*lhs.clone()) != self.evaluate(*rhs.clone()))),
+                    TokenType::EQUALEQUAL => Ok(Atom::Bool(self.evaluate(*lhs.clone()) == self.evaluate(*rhs.clone()))),
+                    TokenType::LESSEQUAL | 
+                    TokenType::GREATEREQUAL |
+                    TokenType::GREATER  |
+                    TokenType::LESS => Atom::comp(&op.token_type, self.evaluate(*lhs.clone()), self.evaluate(*rhs.clone())),
                     _ => todo!()
+                }; 
+
+                match res {
+                   Ok(atom) => atom,
+                   Err(err) => {
+                       self.error = Some(err);
+                       Atom::Nil 
+                   }
                 }
             }
             _ => todo!()
@@ -48,6 +82,4 @@ impl Visitor<Atom> for Interpreter {
     }
 }
 
-pub fn evaluate(expr: Expr) -> Atom {
-    Interpreter{}.visit_expr(&expr)
-}
+
