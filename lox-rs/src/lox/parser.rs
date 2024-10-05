@@ -1,7 +1,7 @@
 use std::mem::discriminant;
 use super::scanner::{TokenType, Token};
 use super::atom::Atom;
-use super::ast::Expr;
+use super::ast::{Expr, Stmt};
 use super::errors::LanguageError;
 
 pub struct Parser<'a> {
@@ -15,12 +15,74 @@ impl<'a> Parser<'a> {
         Self { tokens, current: 0, errs: Vec::new()}
     }
 
-    pub fn parse(&mut self) -> Result<Expr,String> {
-       if self.errs.len()  == 0 {
-           Ok(self.expr())
-       }else{
+    pub fn parse(&mut self) -> Result<Vec<Stmt>,String> {
+        let mut statements: Vec<Stmt> = Vec::new();
+        if self.current < self.tokens.len() {
+           statements.push(self.decl());
+        }
+
+        if self.errs.len() == 0 {
+            Ok(statements)
+        }else{
            Err("Error for some reason".into())
-       }
+        }
+    }
+
+    fn stmt(&mut self) -> Stmt {
+        if self.tmatch(&[TokenType::PRINT]){
+            self.print_stmt()
+        }else{
+            self.expr_stmt()
+        }
+    }
+
+    fn decl(&mut self) -> Stmt {
+        if self.tmatch(&[TokenType::VAR]) {
+            self.var_decl()
+        }else{
+            self.stmt()
+        }
+    }
+
+    fn var_decl(&mut self) -> Stmt {
+        let lval = if let TokenType::IDENTIFIER(lval) = self.advance().token_type {
+            lval
+        }else{
+            self.errs.push(LanguageError::ParserError("Excpected identifier".into()));
+            "".into()
+        };
+        
+        let mut rval: Expr = Expr::Literal(Atom::Nil);
+
+        if self.tmatch(&[TokenType::EQUAL]) {
+            rval = self.expr();
+        };
+
+        match self.consume(&TokenType::SEMICOLON) {
+            Ok(_) => {},
+            Err(err) => self.errs.push(LanguageError::ParserError(err))
+        };
+
+        Stmt::Var(lval, Box::new(rval))
+    }
+
+    fn expr_stmt(&mut self) -> Stmt {
+        let expr: Expr = self.expr();
+        match self.consume(&TokenType::SEMICOLON) {
+            Ok(_) => {},
+            Err(err) => self.errs.push(LanguageError::ParserError(err))
+        };
+        Stmt::Expr(Box::new(expr))
+    }
+
+    fn print_stmt(&mut self) -> Stmt {
+        let val: Expr = self.expr();
+        match self.consume(&TokenType::SEMICOLON) {
+            Ok(_) => {},
+            Err(err) => self.errs.push(LanguageError::ParserError(err))
+        };
+        
+        Stmt::Print(Box::new(val))
     }
 
     fn expr(&mut self) -> Expr {

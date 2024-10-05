@@ -1,7 +1,7 @@
 extern crate lox_rs;
 use lox_rs::lox;
 
-use lox::ast::{Expr, AstPrinter, Visitor};
+use lox::ast::{Expr, AstPrinter, ExprVisitor};
 use lox::scanner::{Token, TokenType};
 
 fn main() {

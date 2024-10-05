@@ -1,7 +1,6 @@
 use super::errors::LanguageError;
 use super::scanner::{Token, TokenType};
 use super::atom::Atom;
-use std::any::{Any, TypeId};
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -11,13 +10,28 @@ pub enum Expr {
     Unary(Box<Token>, Box<Expr>)
 }
 
-pub trait Visitor<T> {
+#[derive(Debug, Clone)]
+pub enum Stmt {
+    Expr(Box<Expr>),
+    Print(Box<Expr>),
+    Var(String, Box<Expr>)
+}
+
+#[derive(Debug, Clone)]
+pub struct VarDecl(Box<Expr>);
+
+pub trait ExprVisitor<T> {
     fn visit_expr(&mut self, exp: &Expr) -> T; 
 }
 
+pub trait StmtVisitor {
+    fn visit_stmt(&mut self, stmt: &Stmt); 
+}
+
+
 pub struct AstPrinter;
 
-impl Visitor<String> for AstPrinter {
+impl ExprVisitor<String> for AstPrinter {
     fn visit_expr(&mut self, exp: &Expr) -> String {
         match exp {
             Expr::Binary(e1, t, e2) => format!("[({}) {} {}]", t, self.visit_expr(e1), self.visit_expr(e2)),
@@ -28,12 +42,21 @@ impl Visitor<String> for AstPrinter {
     }
 }
 
+pub struct Environment;
+
+impl Environment {
+    pub fn get(lval: String) -> Atom {
+        Atom::String("This is a variable".into())
+    }
+}
+
 pub struct Interpreter {
-    pub error: Option<LanguageError>
+    pub error: Option<LanguageError>,
+    pub env: Environment
 }
 
 impl Default for Interpreter {
-    fn default() -> Self { Interpreter { error: None }}
+    fn default() -> Self { Interpreter { error: None , env: Environment{} }}
 }
 
 impl Interpreter {
@@ -48,8 +71,18 @@ impl Interpreter {
 
 }
 
+impl StmtVisitor for Interpreter {
+    fn visit_stmt(&mut self, stmt: &Stmt) {
+        match stmt {
+            Stmt::Print(expr) => println!("{:?}", self.evaluate(*expr.clone())),
+            Stmt::Expr(expr) => {self.evaluate(*expr.clone());},
+            Stmt::Var(name, expr) => { println!("{:?} = {:?}", name, expr)}
+        }
+    }
+}
+
 //dynamic heap allocated Any type
-impl Visitor<Atom> for Interpreter {
+impl ExprVisitor<Atom> for Interpreter {
     fn visit_expr(&mut self, exp: &Expr) -> Atom {
         match exp {
             Expr::Literal(atom) => atom.clone(),
