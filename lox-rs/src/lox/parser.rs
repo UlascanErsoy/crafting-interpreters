@@ -17,10 +17,10 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> Result<Vec<Stmt>,String> {
         let mut statements: Vec<Stmt> = Vec::new();
-        if self.current < self.tokens.len() {
+        while self.current < self.tokens.len() - 1 {
            statements.push(self.decl());
         }
-
+        
         if self.errs.len() == 0 {
             Ok(statements)
         }else{
@@ -45,15 +45,16 @@ impl<'a> Parser<'a> {
     }
 
     fn var_decl(&mut self) -> Stmt {
-        let lval = if let TokenType::IDENTIFIER(lval) = self.advance().token_type {
+        let lval = if let TokenType::IDENTIFIER(lval) = self.peek().token_type {
             lval
         }else{
-            self.errs.push(LanguageError::ParserError("Excpected identifier".into()));
-            "".into()
+            self.errs.push(LanguageError::ParserError("Expected Identifier".into()));
+            "".into() 
         };
         
         let mut rval: Expr = Expr::Literal(Atom::Nil);
 
+        self.advance();
         if self.tmatch(&[TokenType::EQUAL]) {
             rval = self.expr();
         };
@@ -63,7 +64,7 @@ impl<'a> Parser<'a> {
             Err(err) => self.errs.push(LanguageError::ParserError(err))
         };
 
-        Stmt::Var(lval, Box::new(rval))
+        Stmt::Var(Box::new(lval), Box::new(rval))
     }
 
     fn expr_stmt(&mut self) -> Stmt {
@@ -190,7 +191,8 @@ impl<'a> Parser<'a> {
                     Err(err) => self.errs.push(LanguageError::ParserError(err))
                 }
                 Expr::Grouping(Box::new(expr))
-            }
+            },
+            TokenType::IDENTIFIER(var) => Expr::Var(Box::new(var)),
             _ => unreachable!()
         }
     }

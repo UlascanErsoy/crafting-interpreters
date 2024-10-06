@@ -2,19 +2,23 @@ use super::errors::LanguageError;
 use super::scanner::{Token, TokenType};
 use super::atom::Atom;
 
+use std::collections::HashMap;
+
 #[derive(Debug, Clone)]
 pub enum Expr {
     Binary(Box<Expr>, Box<Token>, Box<Expr>),
     Grouping(Box<Expr>),
     Literal(Atom),
-    Unary(Box<Token>, Box<Expr>)
+    Unary(Box<Token>, Box<Expr>),
+    Var(Box<String>)
+
 }
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Expr(Box<Expr>),
     Print(Box<Expr>),
-    Var(String, Box<Expr>)
+    Var(Box<String>, Box<Expr>)
 }
 
 #[derive(Debug, Clone)]
@@ -37,16 +41,26 @@ impl ExprVisitor<String> for AstPrinter {
             Expr::Binary(e1, t, e2) => format!("[({}) {} {}]", t, self.visit_expr(e1), self.visit_expr(e2)),
             Expr::Grouping(e) => format!("(group {} )", self.visit_expr(e)),
             Expr::Literal(n) => format!("{:?}", n),
-            Expr::Unary(t, e) => format!("( {} {} )", t, self.visit_expr(e))
+            Expr::Unary(t, e) => format!("( {} {} )", t, self.visit_expr(e)),
+            Expr::Var(val) => format!("{}", val)
         }
     }
 }
 
-pub struct Environment;
+pub struct Environment {
+    values: HashMap<String, Atom>
+}
 
 impl Environment {
-    pub fn get(lval: String) -> Atom {
-        Atom::String("This is a variable".into())
+
+    pub fn set(&mut self, lval: String, rval: Atom) {
+        self.values.insert(lval, rval);
+    }
+    pub fn get(&self, lval: String) -> Atom {
+        match self.values.get(&lval) {
+            Some(rval) => rval.clone(),
+            None => panic!("{} not defined", lval)
+        }
     }
 }
 
@@ -56,7 +70,7 @@ pub struct Interpreter {
 }
 
 impl Default for Interpreter {
-    fn default() -> Self { Interpreter { error: None , env: Environment{} }}
+    fn default() -> Self { Interpreter { error: None , env: Environment{ values: HashMap::new() } }}
 }
 
 impl Interpreter {
@@ -76,7 +90,10 @@ impl StmtVisitor for Interpreter {
         match stmt {
             Stmt::Print(expr) => println!("{:?}", self.evaluate(*expr.clone())),
             Stmt::Expr(expr) => {self.evaluate(*expr.clone());},
-            Stmt::Var(name, expr) => { println!("{:?} = {:?}", name, expr)}
+            Stmt::Var(name, expr) => {
+                let rval: Atom = self.evaluate(*expr.clone());
+                self.env.set(*name.clone(), rval)
+            }
         }
     }
 }
@@ -109,7 +126,8 @@ impl ExprVisitor<Atom> for Interpreter {
                        Atom::Nil 
                    }
                 }
-            }
+            },
+            Expr::Var(var) => self.env.get(*var.clone()),
             _ => todo!()
         }
     }
